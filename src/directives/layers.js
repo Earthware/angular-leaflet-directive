@@ -16,6 +16,7 @@ angular.module("leaflet-directive").directive('layers', function ($log, $q, leaf
                 leafletScope  = controller.getLeafletScope(),
                 layers = leafletScope.layers,
                 createLayer = leafletLayerHelpers.createLayer,
+                forceLayerToTop = leafletLayerHelpers.forceLayerToTop,
                 updateLayersControl = leafletControlHelpers.updateLayersControl,
                 isLayersControlVisible = false;
 
@@ -73,13 +74,10 @@ angular.module("leaflet-directive").directive('layers', function ($log, $q, leaf
                     if (layers.overlays[layerName].visible === true) {
                         // check if we must use leaflet 'hack' to force this overlay to render on top of all others
                         // use for label overlays above other overlays
-                        if(layers.overlays[layerName].forcetotop){
-                            var topPane = map._createPane('leaflet-top-pane', map.getPanes().mapPane);
-                            var topLayer = leafletLayers.overlays[layerName].addTo(map);
-                            topPane.appendChild(topLayer.getContainer());
-                            topLayer.setZIndex(9);
+                        if (layers.overlays[layerName].forcetotop) {
+                            forceLayerToTop(leafletLayers.overlays[layerName], map);
                         }
-                        else{
+                        else {
                             map.addLayer(leafletLayers.overlays[layerName]);
                         }
                     }
@@ -163,11 +161,8 @@ angular.module("leaflet-directive").directive('layers', function ($log, $q, leaf
                         if (newOverlayLayers[newName].visible && !map.hasLayer(leafletLayers.overlays[newName])) {
                             // check if we must use leaflet 'hack' to force this overlay to render on top of all others
                             // use for label overlays above other overlays
-                            if(layers.overlays[layerName].forcetotop){
-                                var topPane = map._createPane('leaflet-top-pane', map.getPanes().mapPane);
-                                var topLayer = leafletLayers.overlays[layerName].addTo(map);
-                                topPane.appendChild(topLayer.getContainer());
-                                topLayer.setZIndex(9);
+                            if(layers.overlays[newName].forcetotop){
+                                forceLayerToTop(leafletLayers.overlays[newName], map);
                             }
                             else{
                                 map.addLayer(leafletLayers.overlays[newName]);

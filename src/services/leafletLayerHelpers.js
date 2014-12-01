@@ -319,6 +319,24 @@ angular.module("leaflet-directive").factory('leafletLayerHelpers', function ($ro
 
             //TODO Add $watch to the layer properties
             return layerTypes[layerDefinition.type].createLayer(params);
+        },
+        forceLayerToTop: function(layer, map){
+            var topLayer = layer.addTo(map);
+            // copy base onAdd method so we can call it after over-riding it below
+            L.TileLayer.prototype.baseonAdd = L.TileLayer.prototype.onAdd;
+
+            // wait till the tilelayer's onAdd method is call to ensure it has a dom element ready
+            topLayer.onAdd = function (map) {
+                // call base method
+                this.baseonAdd(map);
+
+                // create a top level leaflet pane
+                var topPane = L.DomUtil.create('div', 'leaflet-top-pane', map.getPanes().mapPane);
+
+                // add this tilelayer to the top pane
+                topPane.appendChild(topLayer.getContainer());
+                topLayer.setZIndex(9);
+            };
         }
     };
 });

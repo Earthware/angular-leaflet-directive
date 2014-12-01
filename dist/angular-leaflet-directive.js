@@ -608,6 +608,7 @@ angular.module("leaflet-directive").directive('layers', ["$log", "$q", "leafletD
                 leafletScope  = controller.getLeafletScope(),
                 layers = leafletScope.layers,
                 createLayer = leafletLayerHelpers.createLayer,
+                forceLayerToTop = leafletLayerHelpers.forceLayerToTop,
                 updateLayersControl = leafletControlHelpers.updateLayersControl,
                 isLayersControlVisible = false;
 
@@ -665,13 +666,10 @@ angular.module("leaflet-directive").directive('layers', ["$log", "$q", "leafletD
                     if (layers.overlays[layerName].visible === true) {
                         // check if we must use leaflet 'hack' to force this overlay to render on top of all others
                         // use for label overlays above other overlays
-                        if(layers.overlays[layerName].forcetotop){
-                            var topPane = map._createPane('leaflet-top-pane', map.getPanes().mapPane);
-                            var topLayer = leafletLayers.overlays[layerName].addTo(map);
-                            topPane.appendChild(topLayer.getContainer());
-                            topLayer.setZIndex(9);
+                        if (layers.overlays[layerName].forcetotop) {
+                            forceLayerToTop(leafletLayers.overlays[layerName], map);
                         }
-                        else{
+                        else {
                             map.addLayer(leafletLayers.overlays[layerName]);
                         }
                     }
@@ -753,7 +751,14 @@ angular.module("leaflet-directive").directive('layers', ["$log", "$q", "leafletD
 
                         // check for the .visible property to hide/show overLayers
                         if (newOverlayLayers[newName].visible && !map.hasLayer(leafletLayers.overlays[newName])) {
-                            map.addLayer(leafletLayers.overlays[newName]);
+                            // check if we must use leaflet 'hack' to force this overlay to render on top of all others
+                            // use for label overlays above other overlays
+                            if(layers.overlays[newName].forcetotop){
+                                forceLayerToTop(leafletLayers.overlays[newName], map);
+                            }
+                            else{
+                                map.addLayer(leafletLayers.overlays[newName]);
+                            }
                         } else if (newOverlayLayers[newName].visible === false && map.hasLayer(leafletLayers.overlays[newName])) {
                             map.removeLayer(leafletLayers.overlays[newName]);
                         }
@@ -2619,6 +2624,24 @@ angular.module("leaflet-directive").factory('leafletLayerHelpers', ["$rootScope"
 
             //TODO Add $watch to the layer properties
             return layerTypes[layerDefinition.type].createLayer(params);
+        },
+        forceLayerToTop: function(layer, map){
+            var topLayer = layer.addTo(map);
+            // copy base onAdd method so we can call it after over-riding it below
+            L.TileLayer.prototype.baseonAdd = L.TileLayer.prototype.onAdd;
+
+            // wait till the tilelayer's onAdd method is call to ensure it has a dom element ready
+            topLayer.onAdd = function (map) {
+                // call base method
+                this.baseonAdd(map);
+
+                // create a top level leaflet pane
+                var topPane = L.DomUtil.create('div', 'leaflet-top-pane', map.getPanes().mapPane);
+
+                // add this tilelayer to the top pane
+                topPane.appendChild(topLayer.getContainer());
+                topLayer.setZIndex(9);
+            };
         }
     };
 }]);
